@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Proceso ETL con Python</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0 auto;
+            max-width: 900px;
+            padding: 20px;
+            color: #333;
+            background-color: #f9f9f9;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+        }
+        h2 {
+            font-size: 2em;
+        }
+        h3 {
+            font-size: 1.5em;
+            border-bottom: 1px solid #ccc;
+        }
+        pre {
+            background-color: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: "Courier New", Courier, monospace;
+        }
+        code {
+            font-family: "Courier New", Courier, monospace;
+        }
+        .container {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        strong {
+            color: #3498db;
+        }
+        hr {
+            border: 0;
+            height: 1px;
+            background: #ccc;
+            margin: 40px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Manual Práctico de ETL con Python en Google Colaboratory 🐍</h1>
+
+        <p>¡Hola! En este manual, te guiaré a través de todo el proceso <strong>ETL (Extracción, Transformación y Carga)</strong>. Veremos cómo tomar datos "crudos", limpiarlos, darles una estructura coherente y dejarlos listos para su análisis. Usaremos la librería <strong>pandas</strong>, una herramienta fundamental para la manipulación de datos en Python.</p>
+
+        <p>Para nuestro ejemplo, imagina que tenemos un archivo CSV llamado <code>ventas_tienda.csv</code> con datos de ventas que, como suele pasar, no están perfectos.</p>
+        
+        <p><strong>Nuestro archivo <code>ventas_tienda.csv</code> podría lucir así:</strong></p>
+        <pre><code>ID_Venta,Fecha,Producto,Categoria,Precio,Cantidad,ID_Cliente,Region
+1,2023-01-15,Laptop Gamer,Electronica,1500.50,1,101,Norte
+2,2023-01-16,Mouse Inalambrico,Accesorios,25.00,2,102,
+3,2023-01-17,Teclado Mecanico,Accesorios,75.99,1,101,Norte
+4,18/01/2023,Monitor 24",Monitores,250.00,1,103,Sur
+5,2023-01-19,,Monitores,300.00,1,104,Centro
+6,2023-01-20,Laptop Gamer,Electronica,1500.50,1,101,Norte
+7,2023-01-21,Silla Gamer,Muebles,200.00,N/A,105,Oeste
+8,2023-01-22,Webcam HD,Accesorios,-50.00,1,106,Norte
+9,2023-01-23,Microfono,accesorios,60.00,1,107,Sur</code></pre>
+
+        <p>Este pequeño conjunto de datos ya presenta varios problemas que abordaremos:</p>
+        <ul>
+            <li>Fechas con formato inconsistente.</li>
+            <li>Valores faltantes.</li>
+            <li>Un registro duplicado.</li>
+            <li>Inconsistencia en texto (mayúsculas/minúsculas).</li>
+            <li>Valores sin sentido (precios negativos).</li>
+            <li>Tipos de datos incorrectos.</li>
+        </ul>
+        <p>¡Vamos a limpiarlo!</p>
+
+        <hr>
+
+        <h2>Paso 1: Preparar el Entorno en Google Colaboratory</h2>
+        <p>Lo primero es abrir un nuevo notebook en Google Colab. No necesitas instalar nada, ya que pandas viene preinstalado.</p>
+
+        <hr>
+
+        <h2>Paso 2: Extracción (E - Extract) 📥</h2>
+        <p>En esta fase, mi objetivo es leer los datos desde su fuente original y cargarlos en mi entorno de trabajo. En este caso, cargaré el archivo CSV a un <strong>DataFrame</strong> de pandas. Un DataFrame es, en esencia, una tabla de datos sobre la que puedo trabajar.</p>
+        <p>Primero, necesito subir mi archivo <code>ventas_tienda.csv</code> a Colab. Puedo hacerlo manualmente usando el panel izquierdo en la sección de "Archivos".</p>
+        <p>Una vez subido, ejecuto el siguiente código en una celda:</p>
+        <pre><code># Importo la librería pandas, que es mi herramienta principal.
+# La renombro como 'pd' por convención, para escribir menos.
+import pandas as pd
+
+# Defino el nombre de mi archivo.
+nombre_archivo = 'ventas_tienda.csv'
+
+# Uso la función read_csv de pandas para cargar los datos en un DataFrame.
+try:
+    df = pd.read_csv(nombre_archivo)
+    print("¡Archivo cargado con éxito!")
+    # Muestro las primeras 5 filas para verificar que se cargó bien.
+    print("Primeras filas de los datos:")
+    print(df.head())
+except FileNotFoundError:
+    print(f"Error: No se encontró el archivo '{nombre_archivo}'. Asegúrate de haberlo subido a Colab.")
+</code></pre>
+        <p>Al ejecutar esto, veré las primeras filas de mi tabla, confirmando que los datos están en memoria y listos para ser transformados.</p>
+
+        <hr>
+
+        <h2>Paso 3: Transformación (T - Transform) ✨</h2>
+        <p>Esta es la fase más importante. Aquí es donde realizo toda la limpieza y estandarización. Abordaré cada problema uno por uno.</p>
+
+        <h3>3.1. Exploración Inicial</h3>
+        <p>Antes de modificar algo, siempre exploro los datos para entender su estado. Uso <code>.info()</code> para ver los tipos de datos y los valores nulos, y <code>.describe()</code> para obtener estadísticas básicas.</p>
+        <pre><code># .info() me da un resumen de mi DataFrame
+print("Información general del DataFrame:")
+df.info()
+
+# .describe() me da estadísticas descriptivas para las columnas numéricas
+print("\nEstadísticas descriptivas:")
+print(df.describe())
+</code></pre>
+
+        <h3>3.2. Manejo de Duplicados</h3>
+        <p>Los registros duplicados pueden distorsionar los análisis. Mi primer paso es identificarlos y eliminarlos.</p>
+        <pre><code># Primero, verifico cuántos duplicados hay.
+duplicados = df.duplicated().sum()
+print(f"Número de filas duplicadas encontradas: {duplicados}")
+
+# Si hay duplicados, los elimino.
+if duplicados > 0:
+    df.drop_duplicates(inplace=True)
+    print("Filas duplicadas eliminadas.")
+    print(f"Número de filas después de eliminar duplicados: {len(df)}")
+</code></pre>
+
+        <h3>3.3. Corrección de Tipos de Datos y Formatos</h3>
+        
+        <h4>a) Columna <code>Fecha</code>:</h4>
+        <p>Tengo formatos 'YYYY-MM-DD' y 'DD/MM/YYYY'. Debo unificarlos.</p>
+        <pre><code># Convierto la columna 'Fecha' a un formato de fecha estándar (datetime).
+# El argumento errors='coerce' convierte las fechas que no pueda entender en 'NaT' (Not a Time).
+df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+print("Formato de fecha corregido y unificado.")
+</code></pre>
+
+        <h4>b) Columnas de texto (<code>Categoria</code>):</h4>
+        <p>Tengo 'Accesorios' y 'accesorios'. Debo estandarizarlo a minúsculas.</p>
+        <pre><code># Convierto todo el texto de la columna 'Categoria' a minúsculas.
+df['Categoria'] = df['Categoria'].str.lower()
+print("Categorías estandarizadas a minúsculas.")
+</code></pre>
+
+        <h3>3.4. Manejo de Valores Faltantes (Nulos)</h3>
+        <p>La estrategia para manejar los valores faltantes depende del contexto de cada columna.</p>
+        
+        <h4>a) <code>Producto</code>:</h4>
+        <p>Un producto faltante hace que el registro sea inútil. Decido eliminar esas filas.</p>
+        <pre><code># Elimino las filas donde el 'Producto' es nulo.
+df.dropna(subset=['Producto'], inplace=True)
+</code></pre>
+
+        <h4>b) <code>Region</code>:</h4>
+        <p>Podría rellenar el valor faltante con uno genérico como 'Desconocida'.</p>
+        <pre><code># Relleno los valores nulos en 'Region' con la palabra 'desconocida'.
+df['Region'].fillna('desconocida', inplace=True)
+</code></pre>
+
+        <h4>c) <code>Cantidad</code>:</h4>
+        <p>La columna tiene 'N/A' y debe ser numérica. La convierto a número y relleno los faltantes con la mediana.</p>
+        <pre><code># Convierto la columna a numérico. 'coerce' transformará 'N/A' en NaN.
+df['Cantidad'] = pd.to_numeric(df['Cantidad'], errors='coerce')
+
+# Relleno los NaN con la mediana de la columna.
+mediana_cantidad = df['Cantidad'].median()
+df['Cantidad'].fillna(mediana_cantidad, inplace=True)
+
+# Convierto la columna a tipo entero.
+df['Cantidad'] = df['Cantidad'].astype(int)
+</code></pre>
+
+        <h3>3.5. Manejo de Valores Inconsistentes o Atípicos</h3>
+        <p>Detecté un precio negativo. Lo convierto a su valor absoluto para corregirlo.</p>
+        <pre><code># La función abs() calcula el valor absoluto.
+df['Precio'] = df['Precio'].abs()
+print("Precios negativos corregidos.")
+</code></pre>
+
+        <hr>
+
+        <h2>Paso 4: Carga (L - Load) 📤</h2>
+        <p>Una vez que mis datos están limpios y estructurados, el último paso es cargarlos en su destino final. Para este ejemplo, será un nuevo archivo CSV.</p>
+        <pre><code># Defino el nombre del archivo de salida.
+archivo_salida = 'ventas_tienda_limpio.csv'
+
+# Guardo el DataFrame limpio en un nuevo archivo CSV.
+# index=False evita que se guarde el índice como una columna.
+df.to_csv(archivo_salida, index=False, encoding='utf-8')
+
+print(f"¡Proceso ETL completado! Los datos limpios se han guardado en '{archivo_salida}'.")
+</code></pre>
+        <p>Después de ejecutar este código, encontrarás un nuevo archivo llamado <code>ventas_tienda_limpio.csv</code>. Este archivo contendrá los datos transformados y listos para ser analizados.</p>
+        <p><strong>El archivo final se verá así:</strong></p>
+        <pre><code>ID_Venta,Fecha,Producto,Categoria,Precio,Cantidad,ID_Cliente,Region
+1,2023-01-15,Laptop Gamer,electronica,1500.50,1,101,Norte
+2,2023-01-16,Mouse Inalambrico,accesorios,25.00,2,102,desconocida
+3,2023-01-17,Teclado Mecanico,accesorios,75.99,1,101,Norte
+4,2023-01-18,Monitor 24",monitores,250.00,1,103,Sur
+7,2023-01-21,Silla Gamer,muebles,200.00,1,105,Oeste
+8,2023-01-22,Webcam HD,accesorios,50.00,1,106,Norte
+9,2023-01-23,Microfono,accesorios,60.00,1,107,Sur
+</code></pre>
+        <p>¡Y listo! Has completado un ciclo ETL completo. 🎉</p>
+
+    </div>
+
+</body>
+</html>
+```
